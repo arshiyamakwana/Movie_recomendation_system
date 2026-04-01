@@ -2,15 +2,16 @@ import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyCyBSnPIdcWwjO1_qCFPWiFc_5mPMMCza8",
-  authDomain: "cineai-ef075.firebaseapp.com",
-  projectId: "cineai-ef075",
-  storageBucket: "cineai-ef075.firebasestorage.app",
-  messagingSenderId: "423582108393",
-  appId: "1:423582108393:web:814ce9f2cd7c2ceaf07e78",
-  measurementId: "G-GZ80ZGN9JP"
-};
+  apiKey: "AIzaSyChvKcMn4Wz_a6H7pPQkvhzQcPTm1KmYnU",
+  authDomain: "moviesys-eb285.firebaseapp.com",
+  projectId: "moviesys-eb285",
+  storageBucket: "moviesys-eb285.firebasestorage.app",
+  messagingSenderId: "719662705004",
+  appId: "1:719662705004:web:e76decdafd529bdcb2eb49",
+  measurementId: "G-54Y7TKKCV6"
+}
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

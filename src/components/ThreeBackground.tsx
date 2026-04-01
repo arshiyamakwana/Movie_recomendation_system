@@ -1,75 +1,21 @@
-"use client";
-
-import React, { useRef, useMemo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Points, PointMaterial } from "@react-three/drei";
-import * as THREE from "three";
-
-function ParticleField() {
-  const ref = useRef<THREE.Points>(null!);
-  
-  const particles = useMemo(() => {
-    const count = 8000;
-    const positions = new Float32Array(count * 3);
-    const colors = new Float32Array(count * 3);
-    
-    for (let i = 0; i < count; i++) {
-      // Spherical distribution
-      const r = 2 + Math.random() * 3;
-      const theta = 2 * Math.PI * Math.random();
-      const phi = Math.acos(2 * Math.random() - 1);
-      
-      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i * 3 + 2] = r * Math.cos(phi);
-      
-      // Color variation (mostly primary blue with some purple)
-      const isPurple = Math.random() > 0.8;
-      colors[i * 3] = isPurple ? 0.6 : 0.0; // R
-      colors[i * 3 + 1] = isPurple ? 0.2 : 0.6; // G
-      colors[i * 3 + 2] = 1.0; // B
-    }
-    return { positions, colors };
-  }, []);
-
-  useFrame((state, delta) => {
-    if (ref.current) {
-      ref.current.rotation.x -= delta / 20;
-      ref.current.rotation.y -= delta / 30;
-      
-      // Subtle pulsing effect
-      const time = state.clock.getElapsedTime();
-      ref.current.scale.setScalar(1 + Math.sin(time * 0.5) * 0.05);
-    }
-  });
-
-  return (
-    <group rotation={[0, 0, Math.PI / 4]}>
-      <Points ref={ref} positions={particles.positions} colors={particles.colors} stride={3} frustumCulled={false}>
-        <PointMaterial
-          transparent
-          vertexColors
-          size={0.008}
-          sizeAttenuation={true}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-          opacity={0.6}
-        />
-      </Points>
-    </group>
-  );
-}
+import React from "react";
 
 const ThreeBackground = () => {
   return (
-    <div className="fixed inset-0 -z-10 bg-[#020205]">
-      <Canvas camera={{ position: [0, 0, 1.5], fov: 75 }}>
-        <ParticleField />
-      </Canvas>
-      {/* Cinematic Overlays */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#020205_100%)]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#020205]" />
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+    <div className="fixed inset-0 -z-10 bg-[#0f172a] overflow-hidden">
+      {/* Soft gradient orbs */}
+      <div className="absolute -top-32 left-1/4 w-[700px] h-[700px] bg-blue-500/10 blur-[140px] rounded-full animate-pulse" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: "1s" }} />
+      <div className="absolute top-1/2 -left-32 w-[400px] h-[400px] bg-indigo-500/10 blur-[100px] rounded-full animate-pulse" style={{ animationDelay: "2s" }} />
+      <div className="absolute top-1/3 right-1/4 w-[300px] h-[300px] bg-blue-400/5 blur-[80px] rounded-full" />
+      {/* Subtle grid pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.015]"
+        style={{
+          backgroundImage: `linear-gradient(hsl(221,83%,53%) 1px, transparent 1px), linear-gradient(90deg, hsl(221,83%,53%) 1px, transparent 1px)`,
+          backgroundSize: "60px 60px",
+        }}
+      />
     </div>
   );
 };

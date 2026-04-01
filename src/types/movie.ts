@@ -18,6 +18,7 @@ export interface Movie {
   backdrop_path: string;
   release_date: string;
   vote_average: number;
+  genre_ids?: number[];
   genres?: string[];
   runtime?: number;
   tagline?: string;
@@ -28,6 +29,8 @@ export interface Movie {
   watch_link?: string;
   _reason?: string;
   _score?: number;
+  /** Batch-normalized 52–100 for UI; strongest title in the list is 100%. */
+  _displayMatchPercent?: number;
 }
 
 export interface Genre {

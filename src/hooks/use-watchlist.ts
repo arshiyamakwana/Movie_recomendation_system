@@ -6,7 +6,7 @@ export const useWatchlist = () => {
   const [watchlist, setWatchlist] = useState<Movie[]>([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem("cineai_watchlist");
+    const saved = localStorage.getItem("filmflix_watchlist");
     if (saved) setWatchlist(JSON.parse(saved));
   }, []);
 
@@ -21,7 +21,7 @@ export const useWatchlist = () => {
         next = [...prev, movie];
         showSuccess(`Added ${movie.title} to watchlist`);
       }
-      localStorage.setItem("cineai_watchlist", JSON.stringify(next));
+      localStorage.setItem("filmflix_watchlist", JSON.stringify(next));
       return next;
     });
   };

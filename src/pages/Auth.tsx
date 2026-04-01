@@ -39,7 +39,7 @@ const Auth = () => {
         showSuccess("Access Granted. Welcome back, Commander.");
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
-        showSuccess("Identity Created. Welcome to CINEAI.");
+        showSuccess("Identity Created. Welcome to FilmFlix.");
       }
       navigate("/");
     } catch (error: any) {
@@ -115,7 +115,7 @@ const Auth = () => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md z-10"
       >
-        <div className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-8 md:p-12 shadow-[0_0_100px_rgba(0,162,255,0.1)] relative overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-3xl border border-foreground/10 rounded-[2.5rem] p-8 md:p-12 shadow-[0_0_100px_rgba(153,85,246,0.12)] relative overflow-hidden">
           <div className="text-center mb-10">
             <motion.div
               initial={{ scale: 0.8 }}
@@ -124,8 +124,8 @@ const Auth = () => {
             >
               <Shield className="w-8 h-8 text-primary" />
             </motion.div>
-            <h1 className="text-4xl font-black tracking-tighter text-white uppercase mb-2">
-              CINE<span className="text-primary">AI</span>
+            <h1 className="text-4xl font-black tracking-tighter text-foreground uppercase mb-2">
+              FILM<span className="text-primary">FLIX</span>
             </h1>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-[0.3em]">
               {isLogin ? "Authentication Required" : "Initialize New Profile"}
@@ -136,28 +136,28 @@ const Auth = () => {
             <div className="space-y-4">
               <Button 
                 onClick={() => handleSocialLogin(googleProvider)}
-                className="w-full h-14 gap-3 font-bold rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all"
+                className="w-full h-14 gap-3 font-bold rounded-2xl bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 text-foreground transition-all"
               >
                 <Globe className="w-5 h-5 text-blue-400" />
                 Continue with Google
               </Button>
               <Button 
                 onClick={() => handleSocialLogin(githubProvider)}
-                className="w-full h-14 gap-3 font-bold rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all"
+                className="w-full h-14 gap-3 font-bold rounded-2xl bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 text-foreground transition-all"
               >
                 <Github className="w-5 h-5" />
                 Continue with GitHub
               </Button>
               <Button 
                 onClick={() => setAuthMethod("email")}
-                className="w-full h-14 gap-3 font-bold rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all"
+                className="w-full h-14 gap-3 font-bold rounded-2xl bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 text-foreground transition-all"
               >
                 <Mail className="w-5 h-5 text-primary" />
                 Continue with Email
               </Button>
               <Button 
                 onClick={() => setAuthMethod("phone")}
-                className="w-full h-14 gap-3 font-bold rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition-all"
+                className="w-full h-14 gap-3 font-bold rounded-2xl bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 text-foreground transition-all"
               >
                 <Phone className="w-5 h-5 text-green-400" />
                 Continue with Phone
@@ -169,11 +169,11 @@ const Auth = () => {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60 ml-1">Network ID</Label>
                 <Input 
                   type="email" 
-                  placeholder="commander@cineai.io" 
+                  placeholder="commander@filmflix.io" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-14 bg-white/5 border-white/10 focus:border-primary/50 rounded-2xl"
+                  className="h-14 bg-foreground/5 border-foreground/10 focus:border-primary/50 rounded-2xl"
                 />
               </div>
               <div className="space-y-2">
@@ -184,7 +184,7 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-14 bg-white/5 border-white/10 focus:border-primary/50 rounded-2xl"
+                  className="h-14 bg-foreground/5 border-foreground/10 focus:border-primary/50 rounded-2xl"
                 />
               </div>
               <Button type="submit" className="w-full h-14 font-black uppercase tracking-widest rounded-2xl bg-primary" disabled={loading}>
@@ -204,7 +204,7 @@ const Auth = () => {
                   value={confirmationResult ? verificationCode : phoneNumber}
                   onChange={(e) => confirmationResult ? setVerificationCode(e.target.value) : setPhoneNumber(e.target.value)}
                   required
-                  className="h-14 bg-white/5 border-white/10 focus:border-primary/50 rounded-2xl"
+                  className="h-14 bg-foreground/5 border-foreground/10 focus:border-primary/50 rounded-2xl"
                 />
               </div>
               <Button type="submit" className="w-full h-14 font-black uppercase tracking-widest rounded-2xl bg-primary" disabled={loading}>

@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, X, Loader2 } from "lucide-react";
 import { Movie } from "@/types/movie";
-import { searchMovies, getImageUrl } from "@/services/tmdb";
+import { searchMovies, getImageUrl, type MovieLanguage } from "@/services/tmdb";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SearchBarProps {
   onSelect: (movie: Movie) => void;
+  /** Filter search to All / Hindi (Bollywood) / English (Hollywood) */
+  language?: MovieLanguage;
 }
 
-const SearchBar = ({ onSelect }: SearchBarProps) => {
+const SearchBar = ({ onSelect, language = "all" }: SearchBarProps) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ const SearchBar = ({ onSelect }: SearchBarProps) => {
     const timer = setTimeout(async () => {
       if (query.length > 2) {
         setLoading(true);
-        const data = await searchMovies(query);
+        const data = await searchMovies(query, language);
         setResults(data.slice(0, 6));
         setLoading(false);
         setIsOpen(true);
@@ -31,7 +33,7 @@ const SearchBar = ({ onSelect }: SearchBarProps) => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, language]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

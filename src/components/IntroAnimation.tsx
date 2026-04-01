@@ -9,13 +9,13 @@ interface IntroAnimationProps {
 
 const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
   const [isVisible, setIsVisible] = useState(true);
-  const letters = "CINEAI".split("");
+  const letters = "FilmFlix".split("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onComplete, 1000);
-    }, 4500);
+      setTimeout(onComplete, 800);
+    }, 2500);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -76,7 +76,7 @@ const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
           exit="exit"
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black overflow-hidden perspective-1000"
         >
-          {/* Deep Space Background */}
+         
           <motion.div 
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 0.3, scale: 1 }}
@@ -98,15 +98,15 @@ const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
                     i >= 4 ? "text-primary" : "text-white"
                   }`}
                   style={{
-                    textShadow: i >= 4 
-                      ? "0 0 80px rgba(0,162,255,0.6), 0 0 20px rgba(0,162,255,0.4)" 
+                    textShadow: i >= 4
+                      ? "0 0 80px rgba(153,85,246,0.7), 0 0 20px rgba(153,85,246,0.5)"
                       : "0 0 40px rgba(255,255,255,0.2)"
                   }}
                 >
                   {char}
                 </motion.span>
                 
-                {/* Scanning Line per letter */}
+               
                 <motion.div
                   initial={{ top: "-10%", opacity: 0 }}
                   animate={{ top: "110%", opacity: [0, 1, 0] }}
@@ -117,7 +117,7 @@ const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
             ))}
           </div>
 
-          {/* Global Scanning Beam */}
+      
           <motion.div
             initial={{ x: "-100%", skewX: -20 }}
             animate={{ x: "200%" }}
@@ -125,7 +125,7 @@ const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
             className="absolute inset-0 w-1/3 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"
           />
 
-          {/* Cinematic Vignette */}
+     
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_black_90%)] pointer-events-none" />
         </motion.div>
       )}
