@@ -1,0 +1,701 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Introduction\n",
+    "\n",
+    "### Objective\n",
+    "\n",
+    "- This notebook demonstrates a methodology for classifying images based on facial expressions into distinct emotion categories. The primary focus is on Facial Emotion Recognition (FER), a challenging yet fascinating area of machine learning.\n",
+    "\n",
+    "### Dataset Overview\n",
+    "\n",
+    "- For this task, I have utilized the CK+ (Cohn-Kanade Plus) dataset. It's crucial to note that CK+ is a relatively small dataset comprising 981 images. Despite its limited size, CK+ is widely recognized for its high-quality, labeled facial expression images, making it a suitable choice for deep learning experiments in emotion classification.\n",
+    "\n",
+    "### Model Architecture and Implementation\n",
+    "\n",
+    "- The core of this project is the implementation of a 2D Convolutional Neural Network (CNN2D). CNNs are particularly effective for image classification tasks due to their ability to extract features from spatial data. The architecture of the CNN2D model used in this project is designed to efficiently process and classify facial expression images.\n",
+    "\n",
+    "### Results\n",
+    "\n",
+    "- The model achieved a remarkable validation accuracy of 96.46%. This high level of accuracy indicates the model's effectiveness in recognizing and classifying emotions from facial expressions."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Importing Necessary Libraries"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "_cell_guid": "b1076dfc-b9ad-4769-8c92-a6c4dae69d19",
+    "_uuid": "8f2839f25d086af736a60e9eeb907d3b93b6e0e5",
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "import pandas as pd  # For data manipulation and analysis\n",
+    "import numpy as np  # For numerical operations and working with arrays\n",
+    "import cv2 as cv  # For image processing tasks\n",
+    "import os  # For interacting with the operating system, like file paths\n",
+    "import tensorflow as tf  # For building and training neural network models\n",
+    "\n",
+    "from keras.preprocessing.image import ImageDataGenerator  # For real-time data augmentation\n",
+    "from tensorflow.keras.models import load_model  # For loading a saved Keras model\n",
+    "from keras.models import Sequential  # For creating a linear stack of layers in the model\n",
+    "from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Flatten  # For building model layers\n",
+    "from keras.optimizers import Adam  # For optimization algorithms\n",
+    "from keras.layers import BatchNormalization  # For applying Batch Normalization in neural network layers\n",
+    "from keras.regularizers import l2  # For applying L2 regularization to prevent overfitting\n",
+    "from keras.callbacks import ReduceLROnPlateau, EarlyStopping  # Importing specific callback functions\n",
+    "\n",
+    "import warnings  # For handling warnings\n",
+    "import sys  # For interacting with the Python interpreter\n",
+    "if not sys.warnoptions:\n",
+    "    warnings.simplefilter(\"ignore\")  # Ignore simple warnings if not already done\n",
+    "warnings.filterwarnings(\"ignore\", category=DeprecationWarning)  # Ignore deprecation warnings"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Reading and Splitting the Data using 'os' and 'shutil'\n",
+    "\n",
+    "\n",
+    "> ### Why *shutil*?\n",
+    "> \n",
+    "> - The notebook uses *shutil* to copy image files from the original dataset directory to separate training and testing directories as part of the dataset preparation process for a machine learning task. This module is chosen for its efficiency and ability to handle file operations in a high-level, user-friendly manner."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:47.675755Z",
+     "iopub.status.busy": "2023-11-04T18:42:47.675158Z",
+     "iopub.status.idle": "2023-11-04T18:42:52.830347Z",
+     "shell.execute_reply": "2023-11-04T18:42:52.829354Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:47.675728Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "import shutil\n",
+    "\n",
+    "# Define the path to your original dataset and the paths where you want to store your train and test datasets\n",
+    "original_dataset_dir = '/kaggle/input/ckplus/CK+48'\n",
+    "train_dir = 'CK+48_train'\n",
+    "test_dir = 'CK+48_test'\n",
+    "\n",
+    "# Create directories for training and testing datasets if they do not exist\n",
+    "os.makedirs(train_dir, exist_ok=True)\n",
+    "os.makedirs(test_dir, exist_ok=True)\n",
+    "\n",
+    "# Define the split ratio\n",
+    "train_ratio = 0.8\n",
+    "\n",
+    "# Loop through each emotion category in the original dataset\n",
+    "for emotion in os.listdir(original_dataset_dir):\n",
+    "    emotion_dir = os.path.join(original_dataset_dir, emotion)\n",
+    "    if os.path.isdir(emotion_dir):\n",
+    "        # Get a list of all the image filenames in the emotion category\n",
+    "        images = [f for f in os.listdir(emotion_dir) if os.path.isfile(os.path.join(emotion_dir, f))]\n",
+    "        \n",
+    "        # Randomly shuffle the list of image filenames\n",
+    "        np.random.shuffle(images)\n",
+    "        \n",
+    "        # Split the list of image filenames into training and testing sets\n",
+    "        train_size = int(len(images) * train_ratio)\n",
+    "        train_images = images[:train_size]\n",
+    "        test_images = images[train_size:]\n",
+    "        \n",
+    "        # Create directories for the emotion category in the train and test datasets\n",
+    "        train_emotion_dir = os.path.join(train_dir, emotion)\n",
+    "        test_emotion_dir = os.path.join(test_dir, emotion)\n",
+    "        os.makedirs(train_emotion_dir, exist_ok=True)\n",
+    "        os.makedirs(test_emotion_dir, exist_ok=True)\n",
+    "        \n",
+    "        # Copy the images into the corresponding directories\n",
+    "        for image in train_images:\n",
+    "            shutil.copy(os.path.join(emotion_dir, image), os.path.join(train_emotion_dir, image))\n",
+    "        for image in test_images:\n",
+    "            shutil.copy(os.path.join(emotion_dir, image), os.path.join(test_emotion_dir, image))\n",
+    "\n",
+    "print(\"Dataset splitting complete\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Extracting the Dimensions of the image"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:52.831938Z",
+     "iopub.status.busy": "2023-11-04T18:42:52.831632Z",
+     "iopub.status.idle": "2023-11-04T18:42:52.85871Z",
+     "shell.execute_reply": "2023-11-04T18:42:52.857813Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:52.83191Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "import cv2\n",
+    "\n",
+    "# Load the image\n",
+    "img = cv2.imread('/kaggle/working/CK+48_train/disgust/S098_003_00000011.png')\n",
+    "\n",
+    "# Get dimensions\n",
+    "height, width, channels = img.shape\n",
+    "print(f'Dimensions: {width}x{height}')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Creating a Training Image Data Generator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:52.861553Z",
+     "iopub.status.busy": "2023-11-04T18:42:52.861156Z",
+     "iopub.status.idle": "2023-11-04T18:42:52.903265Z",
+     "shell.execute_reply": "2023-11-04T18:42:52.902377Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:52.861501Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "# Create a data generator with augmentation\n",
+    "train_data_generator = ImageDataGenerator(\n",
+    "    rescale=1./255,  # Rescale the pixel values (normalization)\n",
+    "    rotation_range=15,  # Random rotation in the range of 15 degrees\n",
+    "    width_shift_range=0.15,  # Random horizontal shifts (15% of total width)\n",
+    "    height_shift_range=0.15,  # Random vertical shifts (15% of total height)\n",
+    "    shear_range=0.15,  # Random shearing transformations\n",
+    "    zoom_range=0.15,  # Random zoom range\n",
+    "    horizontal_flip=True,  # Randomly flip inputs horizontally\n",
+    ")\n",
+    "\n",
+    "# Load images from the directory and apply the defined transformations\n",
+    "fer_training_data = train_data_generator.flow_from_directory(\n",
+    "    '/kaggle/working/CK+48_train',  # Path to the training data\n",
+    "    target_size=(48, 48),  # Resize images to 48x48\n",
+    "    batch_size=64,  # Number of images to yield per batch\n",
+    "    color_mode='grayscale',  # Load images in grayscale\n",
+    "    class_mode='categorical'  # Labels will be returned in categorical format\n",
+    ")\n",
+    "\n",
+    "fer_training_data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Creating a Test Image Data Generator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:52.904551Z",
+     "iopub.status.busy": "2023-11-04T18:42:52.904278Z",
+     "iopub.status.idle": "2023-11-04T18:42:52.923232Z",
+     "shell.execute_reply": "2023-11-04T18:42:52.922363Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:52.904528Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "# Initialize an ImageDataGenerator for test data with rescaling\n",
+    "# Rescales images by dividing pixel values by 255 (normalization)\n",
+    "test_data_generator = ImageDataGenerator(rescale=1./255)\n",
+    "\n",
+    "# Creates a data generator for the test dataset\n",
+    "# flow_from_directory method loads images from a directory,\n",
+    "# in this case, '/kaggle/working/CK+48_test'\n",
+    "fer_test_data = test_data_generator.flow_from_directory(\n",
+    "    '/kaggle/working/CK+48_test',  # Directory path for test images\n",
+    "    target_size = (48, 48),  # Resizes images to 48x48 pixels\n",
+    "    batch_size = 64,  # Number of images to yield per batch\n",
+    "    color_mode = 'grayscale',  # Specifies that images are in grayscale\n",
+    "    class_mode = 'categorical'  # Images are classified categorically\n",
+    ")\n",
+    "\n",
+    "# fer_test_data is now a generator that yields batches of test images and their labels\n",
+    "fer_test_data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Fundamental Machine Learning Techniques\n",
+    "\n",
+    "> 1. **Batch Normalization**\n",
+    ">     - **What it is**: Batch Normalization is a technique to normalize the inputs of each layer within a neural network. It adjusts and scales the activations.\n",
+    ">     - **How it works**: During training, it normalizes the output of a previous activation layer by subtracting the batch mean and dividing by the batch standard deviation. Then, it applies a scale factor and an offset. This helps in mitigating the problem of internal covariate shift, where the distribution of each layer’s inputs changes during training.\n",
+    ">     - **Benefits**: It stabilizes the learning process and dramatically reduces the number of training epochs required to train deep networks. It can also help with gradient problems, allowing for higher learning rates.\n",
+    "\n",
+    "> 2. **L2 Regularization**\n",
+    ">    - **What it is**: L2 regularization, also known as Ridge Regression or weight decay, is a technique used to prevent overfitting by penalizing large weights in your model.\n",
+    ">    - **How it works**: It adds a regularization term to the loss function. This term is the sum of the squares of all the feature weights multiplied by a regularization parameter (lambda). The effect is to shrink the weights of less important features.\n",
+    ">    - **Benefits**: It's effective at preventing overfitting by ensuring that the model weights stay small, which can lead to a simpler model that generalizes better to new data.\n",
+    "\n",
+    "> 3. **Early Stopping**\n",
+    ">    - **What it is**: Early stopping is a form of regularization used to avoid overfitting when training a learner with an iterative method, like gradient descent.\n",
+    ">    - **How it works**: This approach involves monitoring the performance of the model on a validation set during the training process and stopping the training once the performance on the validation set starts to degrade (e.g., the validation loss starts increasing).\n",
+    ">    - **Benefits**: It prevents overfitting by terminating the training process before the model starts to overfit. This also saves computational resources and can result in a more generalized model.\n",
+    "\n",
+    "> 4. **Max Pooling**\n",
+    ">    - **What it is**: Max pooling is a downsampling operation commonly used in convolutional neural networks.\n",
+    ">    - **How it works**: It reduces the spatial dimensions (width and height) of the input volume for the next convolutional layer. It works by sliding a window (usually 2x2) over the input and taking the maximum value from the window.\n",
+    ">    - **Benefits**: It reduces the computational load, memory usage, and the number of parameters, helping to prevent overfitting. It also helps in extracting dominant features which are rotational and positional invariant.\n",
+    "\n",
+    "> 5. **Dropout**\n",
+    ">    - **What it is**: Dropout is a regularization technique used to prevent overfitting in neural networks.\n",
+    ">    - **How it works**: During training, some number of layer outputs are randomly ignored or “dropped out”. This means that their contribution to the activation of downstream neurons is temporally removed on the forward pass and any weight updates are not applied to the neuron on the backward pass.\n",
+    ">    - **Benefits**: As a form of regularization, dropout reduces the complexity of the model. It forces the network to not rely on any one feature, hence preventing overfitting. It makes the model more robust and can lead to better generalization."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Adam and Nadam Optimizers\n",
+    "\n",
+    "> **1. Adam (Adaptive Moment Estimation):**\n",
+    "> \n",
+    ">  - How it Works: Adam combines ideas from AdaGrad and RMSProp. It maintains two moving averages per parameter: one for the gradients (like RMSProp) and one for the square of the gradients (like AdaGrad). It uses these moving averages to adapt the learning rate for each parameter.\n",
+    "> \n",
+    "> - Why Use it: Adam is particularly effective in cases with large datasets or parameters. It's known for its efficiency with large problems involving a lot of data or parameters. Adam is also quite robust to the choice of hyperparameters.\n",
+    "\n",
+    "> **2. Nadam (Nesterov-accelerated Adaptive Moment Estimation):**\n",
+    ">\n",
+    "> - How it Works: Nadam is essentially Adam with Nesterov momentum. It incorporates the Nesterov accelerated gradient into the Adam update rule, which helps in gaining a faster convergence and smoother optimization trajectory.\n",
+    ">\n",
+    "> - Why Use it: Nadam can be more efficient than Adam, especially in scenarios where the momentum helps navigate the optimization landscape more effectively. This can be particularly useful in deep learning models where finding the optimal solution efficiently is crucial."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:52.931377Z",
+     "iopub.status.busy": "2023-11-04T18:42:52.931013Z",
+     "iopub.status.idle": "2023-11-04T18:42:59.351499Z",
+     "shell.execute_reply": "2023-11-04T18:42:59.350739Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:52.931346Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "# Importing the optimizers module from TensorFlow's Keras library\n",
+    "from tensorflow.keras import optimizers\n",
+    "\n",
+    "# Initializing a list of optimizers with specific configurations\n",
+    "optims = [\n",
+    "    optimizers.Nadam(learning_rate=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-07, name='Nadam'),\n",
+    "    optimizers.Adam(0.001),\n",
+    "]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Defining the Model"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:59.353042Z",
+     "iopub.status.busy": "2023-11-04T18:42:59.352748Z",
+     "iopub.status.idle": "2023-11-04T18:42:59.728149Z",
+     "shell.execute_reply": "2023-11-04T18:42:59.727272Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:59.353016Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "from keras.models import Sequential\n",
+    "from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout\n",
+    "\n",
+    "model = Sequential()\n",
+    "\n",
+    "model.add(\n",
+    "        Conv2D(\n",
+    "            filters=512,\n",
+    "            kernel_size=(5,5),\n",
+    "            input_shape=(48, 48, 1),\n",
+    "            activation='elu',\n",
+    "            padding='same',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='conv2d_1'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_1'))\n",
+    "model.add(\n",
+    "        Conv2D(\n",
+    "            filters=256,\n",
+    "            kernel_size=(5,5),\n",
+    "            activation='elu',\n",
+    "            padding='same',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='conv2d_2'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_2'))\n",
+    "    \n",
+    "model.add(MaxPooling2D(pool_size=(2,2), name='maxpool2d_1'))\n",
+    "model.add(Dropout(0.25, name='dropout_1'))\n",
+    "\n",
+    "model.add(\n",
+    "        Conv2D(\n",
+    "            filters=128,\n",
+    "            kernel_size=(3,3),\n",
+    "            activation='elu',\n",
+    "            padding='same',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='conv2d_3'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_3'))\n",
+    "model.add(\n",
+    "        Conv2D(\n",
+    "            filters=128,\n",
+    "            kernel_size=(3,3),\n",
+    "            activation='elu',\n",
+    "            padding='same',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='conv2d_4'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_4'))\n",
+    "    \n",
+    "model.add(MaxPooling2D(pool_size=(2,2), name='maxpool2d_2'))\n",
+    "model.add(Dropout(0.25, name='dropout_2'))\n",
+    "\n",
+    "model.add(\n",
+    "        Conv2D(\n",
+    "            filters=256,\n",
+    "            kernel_size=(3,3),\n",
+    "            activation='elu',\n",
+    "            padding='same',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='conv2d_5'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_5'))\n",
+    "model.add(\n",
+    "        Conv2D(\n",
+    "            filters=512,\n",
+    "            kernel_size=(3,3),\n",
+    "            activation='elu',\n",
+    "            padding='same',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='conv2d_6'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_6'))\n",
+    "    \n",
+    "model.add(MaxPooling2D(pool_size=(2,2), name='maxpool2d_3'))\n",
+    "model.add(Dropout(0.25, name='dropout_3'))\n",
+    "\n",
+    "model.add(Flatten(name='flatten'))\n",
+    "        \n",
+    "model.add(\n",
+    "        Dense(\n",
+    "            256,\n",
+    "            activation='elu',\n",
+    "            kernel_initializer='he_normal',\n",
+    "            name='dense_1'\n",
+    "        )\n",
+    "    )\n",
+    "model.add(BatchNormalization(name='batchnorm_7'))\n",
+    "    \n",
+    "model.add(Dropout(0.25, name='dropout_4'))\n",
+    "    \n",
+    "model.add(\n",
+    "        Dense(\n",
+    "            7,\n",
+    "            activation='softmax',\n",
+    "            name='out_layer'\n",
+    "        )\n",
+    "    )\n",
+    "    \n",
+    "model.compile(\n",
+    "        loss='categorical_crossentropy',\n",
+    "        optimizer='adam',\n",
+    "        metrics=['accuracy']\n",
+    "    )\n",
+    "    \n",
+    "model.summary()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Callbacks"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:42:59.730172Z",
+     "iopub.status.busy": "2023-11-04T18:42:59.729548Z",
+     "iopub.status.idle": "2023-11-04T18:42:59.736163Z",
+     "shell.execute_reply": "2023-11-04T18:42:59.735251Z",
+     "shell.execute_reply.started": "2023-11-04T18:42:59.730137Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "# Reduce learning rate when a metric has stopped improving\n",
+    "early_stopping = EarlyStopping(\n",
+    "    monitor='val_accuracy',\n",
+    "    min_delta=0.00005,\n",
+    "    patience=11,\n",
+    "    verbose=1,\n",
+    "    restore_best_weights=True,\n",
+    ")\n",
+    "\n",
+    "lr_scheduler = ReduceLROnPlateau(\n",
+    "    monitor='val_accuracy',\n",
+    "    factor=0.5,\n",
+    "    patience=7,\n",
+    "    min_lr=1e-7,\n",
+    "    verbose=1,\n",
+    ")\n",
+    "\n",
+    "callbacks = [\n",
+    "    early_stopping,\n",
+    "    lr_scheduler,\n",
+    "]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Training the Model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:45:53.640478Z",
+     "iopub.status.busy": "2023-11-04T18:45:53.639794Z",
+     "iopub.status.idle": "2023-11-04T18:47:06.626095Z",
+     "shell.execute_reply": "2023-11-04T18:47:06.62524Z",
+     "shell.execute_reply.started": "2023-11-04T18:45:53.640444Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "# Reduce learning rate when a metric has stopped improving\n",
+    "early_stopping = EarlyStopping(\n",
+    "    monitor='val_accuracy',\n",
+    "    min_delta=0.00005,\n",
+    "    patience=11,\n",
+    "    verbose=1,\n",
+    "    restore_best_weights=True,\n",
+    ")\n",
+    "\n",
+    "lr_scheduler = ReduceLROnPlateau(\n",
+    "    monitor='val_accuracy',\n",
+    "    factor=0.5,\n",
+    "    patience=7,\n",
+    "    min_lr=1e-7,\n",
+    "    verbose=1,\n",
+    ")\n",
+    "\n",
+    "callbacks = [\n",
+    "    early_stopping,\n",
+    "    lr_scheduler,\n",
+    "]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Visualizing Loss and Accuracy"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T18:45:46.298475Z",
+     "iopub.status.busy": "2023-11-04T18:45:46.298129Z",
+     "iopub.status.idle": "2023-11-04T18:45:48.510789Z",
+     "shell.execute_reply": "2023-11-04T18:45:48.509862Z",
+     "shell.execute_reply.started": "2023-11-04T18:45:46.298446Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "import plotly.graph_objects as go\n",
+    "\n",
+    "# Create traces\n",
+    "fig = go.Figure()\n",
+    "\n",
+    "# Training vs. Validation Accuracy\n",
+    "fig.add_trace(go.Scatter(x=list(range(1, len(history.history['accuracy']) + 1)), y=history.history['accuracy'], mode='lines+markers', name='Training Accuracy'))\n",
+    "fig.add_trace(go.Scatter(x=list(range(1, len(history.history['val_accuracy']) + 1)), y=history.history['val_accuracy'], mode='lines+markers', name='Validation Accuracy'))\n",
+    "\n",
+    "# Layout for Accuracy\n",
+    "fig.update_layout(title='Training vs. Validation Accuracy', xaxis_title='Epoch', yaxis_title='Accuracy', template=\"plotly_white\")\n",
+    "\n",
+    "# Show the plot\n",
+    "fig.show()\n",
+    "\n",
+    "# New figure for loss\n",
+    "fig = go.Figure()\n",
+    "\n",
+    "# Training vs. Validation Loss\n",
+    "fig.add_trace(go.Scatter(x=list(range(1, len(history.history['loss']) + 1)), y=history.history['loss'], mode='lines+markers', name='Training Loss'))\n",
+    "fig.add_trace(go.Scatter(x=list(range(1, len(history.history['val_loss']) + 1)), y=history.history['val_loss'], mode='lines+markers', name='Validation Loss'))\n",
+    "\n",
+    "# Layout for Loss\n",
+    "fig.update_layout(title='Training vs. Validation Loss', xaxis_title='Epoch', yaxis_title='Loss', template=\"plotly_white\")\n",
+    "\n",
+    "# Show the plot\n",
+    "fig.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Model Evaluation"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "execution": {
+     "iopub.execute_input": "2023-11-04T19:01:53.3019Z",
+     "iopub.status.busy": "2023-11-04T19:01:53.301455Z",
+     "iopub.status.idle": "2023-11-04T19:01:53.682143Z",
+     "shell.execute_reply": "2023-11-04T19:01:53.680991Z",
+     "shell.execute_reply.started": "2023-11-04T19:01:53.30187Z"
+    },
+    "trusted": true
+   },
+   "outputs": [],
+   "source": [
+    "# Evaluate the model on the validation dataset\n",
+    "loss, accuracy = model.evaluate(fer_test_data, verbose=1)\n",
+    "\n",
+    "# Print the loss and accuracy\n",
+    "print(f'Validation Loss: {loss}')\n",
+    "print(f'Validation Accuracy: {accuracy * 100:.2f}%')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Conclusion\n",
+    "\n",
+    "This notebook has presented an approach to Facial Emotion Recognition (FER) using a 2D Convolutional Neural Network (CNN2D), demonstrating the power of deep learning in interpreting and classifying human emotions from facial expressions. \n",
+    "\n",
+    "The model's impressive performance, achieving a 96.46% validation accuracy on the CK+ dataset, underscores the potential of CNN2D in accurately identifying emotions, even with a relatively small dataset.\n",
+    "\n",
+    "However, it's important to recognize the limitations inherent in this study. The CK+ dataset, while high in quality, is limited in its size and diversity. This limitation raises questions about the model's generalizability and effectiveness when faced with more diverse and extensive datasets.\n",
+    "\n",
+    "Your feedback and questions are highly appreciated. I am also open to collaborations on similar projects. For further discussions or networking opportunities, please do not hesitate to connect with me on LinkedIn: [Farneet Singh](https://www.linkedin.com/in/farneet-singh-6b155b208).\n",
+    "\n",
+    "Thank you for going through this notebook, and I look forward to your valuable input and potential collaborations! Stay Curious :)"
+   ]
+  }
+ ],
+ "metadata": {
+  "kaggle": {
+   "accelerator": "nvidiaTeslaT4",
+   "dataSources": [
+    {
+     "datasetId": 65125,
+     "sourceId": 128470,
+     "sourceType": "datasetVersion"
+    }
+   ],
+   "isGpuEnabled": true,
+   "isInternetEnabled": true,
+   "language": "python",
+   "sourceType": "notebook"
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.12"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

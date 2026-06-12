@@ -1,0 +1,96 @@
+{
+  "class_names": [
+    "angry",
+    "disgust",
+    "fear",
+    "happy",
+    "neutral",
+    "sad",
+    "surprise"
+  ],
+  "input_size": 48,
+  "val_accuracy": 0.2132,
+  "val_loss": 4.7122,
+  "precision": 0.0455,
+  "recall": 0.2132,
+  "f1_score": 0.0749,
+  "roc_auc": 0.6052,
+  "log_loss": 4.7122,
+  "epochs_trained": 5,
+  "total_samples": 981,
+  "architecture": "CK+ CNN (96.46% notebook architecture)",
+  "per_class_accuracy": {
+    "angry": 0.0,
+    "disgust": 0.0,
+    "fear": 0.0,
+    "happy": 1.0,
+    "neutral": 0.0,
+    "sad": 0.0,
+    "surprise": 0.0
+  },
+  "confusion_matrix": [
+    [
+      0,
+      0,
+      0,
+      27,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      35,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      15,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      42,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      11,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      17,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      50,
+      0,
+      0,
+      0
+    ]
+  ]
+}

@@ -8,6 +8,7 @@ import {
   History, Star, Bookmark, Zap, Globe, Check,
   Link as LinkIcon, X, BrainCircuit, Cpu, PieChart
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Link, useNavigate } from "react-router-dom";
-import { auth } from "@/lib/firebase";
-import { updateProfile, signOut, sendPasswordResetEmail } from "firebase/auth";
+import { supabase } from "@/lib/supabase";
 import { showSuccess, showError } from "@/utils/toast";
 import { useWatchlist } from "@/hooks/use-watchlist";
 
@@ -36,70 +36,60 @@ const Profile = () => {
   const { watchlist } = useWatchlist();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-      setEmail(user.email || user.phoneNumber || "Unknown Identity");
-      setName(user.displayName || "Commander");
-      setPhotoURL(user.photoURL || "");
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      if (!user) { navigate("/auth"); return; }
+      setEmail(user.email || "");
+      setName(user.user_metadata?.full_name || user.email?.split("@")[0] || "User");
+      setPhotoURL(user.user_metadata?.avatar_url || "");
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) navigate("/auth");
+    });
+    return () => listener.subscription.unsubscribe();
   }, [navigate]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth.currentUser) return;
     setSaving(true);
     try {
-      await updateProfile(auth.currentUser, {
-        displayName: name
-      });
+      await supabase.auth.updateUser({ data: { full_name: name } });
       localStorage.setItem("user_bio", bio);
-      showSuccess("Neural profile updated successfully.");
-    } catch (error: any) {
-      showError(error.message);
+      showSuccess("Profile updated successfully.");
+    } catch (error: unknown) {
+      showError(error instanceof Error ? error.message : "Update failed.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleUpdatePhoto = async () => {
-    if (!auth.currentUser || !newPhotoURL) return;
+    if (!newPhotoURL) return;
     setSaving(true);
     try {
-      await updateProfile(auth.currentUser, {
-        photoURL: newPhotoURL
-      });
+      await supabase.auth.updateUser({ data: { avatar_url: newPhotoURL } });
       setPhotoURL(newPhotoURL);
       setIsPhotoDialogOpen(false);
-      showSuccess("Visual identity updated.");
-    } catch (error: any) {
-      showError("Failed to update photo. Ensure the URL is valid.");
+      showSuccess("Photo updated.");
+    } catch {
+      showError("Failed to update photo.");
     } finally {
       setSaving(false);
     }
   };
 
   const handlePasswordReset = async () => {
-    if (!email || email === "Unknown Identity") {
-      showError("No valid email associated with this account.");
-      return;
-    }
-    try {
-      await sendPasswordResetEmail(auth, email);
-      showSuccess("Reset link transmitted to your network ID.");
-    } catch (error: any) {
-      showError(error.message);
-    }
+    if (!email) { showError("No email on this account."); return; }
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) showError(error.message);
+    else showSuccess("Password reset link sent to your email.");
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    showSuccess("Connection terminated.");
+    await supabase.auth.signOut();
+    showSuccess("Signed out.");
     navigate("/auth");
   };
 
@@ -119,7 +109,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen pt-32 pb-32 px-4 md:px-8 max-w-6xl mx-auto relative">
+    <div className="min-h-screen pt-8 pb-16 px-4 md:px-8 max-w-6xl mx-auto relative">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <Link to="/" className="group inline-flex items-center gap-3 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-all">

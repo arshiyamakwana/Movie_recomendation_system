@@ -36,12 +36,13 @@ export const GENRE_MAP: Record<string, number> = {
 };
 
 export const MOOD_MAP: Record<string, number[]> = {
-  "mind-bending": [9648, 878, 18],
-  adrenaline: [28, 12, 53],
-  heartwarming: [10749, 10751, 35],
-  spooky: [27, 9648],
-  epic: [12, 14, 36],
-  chill: [35, 99, 16],
+  happy:    [10749, 35, 10751],
+  sad:      [18, 10749],
+  angry:    [28, 53, 80],
+  surprise: [878, 9648, 53],
+  fear:     [27, 9648],
+  disgust:  [80, 18, 27],
+  neutral:  [878, 9648, 12, 35],
 };
 
 
@@ -126,7 +127,7 @@ export async function fetchMlCandidatePool(
 const fetchFromTMDB = async (endpoint: string) => {
   const url = `${BASE_URL}${endpoint}${
     endpoint.includes("?") ? "&" : "?"
-  }api_key=${API_KEY}`;
+  }api_key=${API_KEY}&include_adult=false&vote_average.gte=5&certification_country=US&certification.lte=PG-13`;
 
   try {
     const res = await fetch(url);
@@ -151,7 +152,11 @@ const fetchFromTMDB = async (endpoint: string) => {
 export const getImageUrl = (
   path: string,
   size: "w92" | "w185" | "w500" | "original" = "w500"
-) => (path ? `${IMAGE_BASE}/${size}${path}` : "/placeholder.svg");
+) => {
+  if (!path) return "/placeholder.svg";
+  if (path.startsWith("http")) return path; // already a full URL (Supabase movies)
+  return `${IMAGE_BASE}/${size}${path}`;
+};
 
 
 export const fetchRecentlyReleased = async (
@@ -314,12 +319,18 @@ export const fetchMoodRecommendations = async (
   language: MovieLanguage = "all"
 ): Promise<Movie[]> => {
   const moodGenreIds = {
-    "mind-bending": [9648, 878, 18, 53],
-    adrenaline:     [28, 12, 53, 80],
+    happy:          [10749, 35, 10751, 18],
+    sad:            [18, 36, 10402],
+    angry:          [28, 53, 80, 12],
+    surprise:       [878, 9648, 53, 12],
+    fear:           [27, 9648, 53],
+    disgust:        [80, 18, 27, 9648],
+    neutral:        [878, 9648, 12, 35, 99],
     heartwarming:   [10749, 10751, 35, 18],
-    spooky:         [27, 9648, 53],
-    epic:           [12, 14, 36, 28],
+    adrenaline:     [28, 12, 53, 80],
     chill:          [35, 99, 16, 10751],
+    spooky:         [27, 9648, 53],
+    "mind-bending": [9648, 878, 18, 53],
   }[mood] || [];
 
   const genres = moodGenreIds.join("|");

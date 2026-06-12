@@ -2,22 +2,17 @@
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { supabase } from "@/lib/supabase";
 import { Loader2 } from "lucide-react";
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
         setAuthenticated(true);
       } else {
         navigate("/auth");
@@ -25,7 +20,16 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAuthenticated(true);
+      } else {
+        setAuthenticated(false);
+        navigate("/auth");
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, [navigate]);
 
   if (loading) {

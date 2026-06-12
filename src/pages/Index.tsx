@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { withDisplayMatchPercent } from "@/lib/mlDisplayMatch";
 import MoviePlannerChat from "@/components/MoviePlannerChat";
 import MoodDetector from "@/components/MoodDetector";
+import { logMoodScan, fetchMoviesByMood, fetchAllMovies } from "@/services/userData";
 
 const CINEMA_STORAGE_KEY = "filmflix-cinema-lang";
 
@@ -48,12 +49,13 @@ function readStoredCinema(): MovieLanguage {
 }
 
 const MOODS = [
-  { id: "mind-bending", label: "Mind-Bending", emoji: "🌀", desc: "Reality twists & psychological depth" },
-  { id: "adrenaline",   label: "Adrenaline",   emoji: "⚡", desc: "Action, chases, pure intensity" },
-  { id: "heartwarming", label: "Heartwarming", emoji: "🫶", desc: "Love, family, feel-good moments" },
-  { id: "spooky",       label: "Spooky",       emoji: "👁️", desc: "Horror, mystery, dark tension" },
-  { id: "epic",         label: "Epic",         emoji: "🏔️", desc: "Grand quests, fantasy worlds" },
-  { id: "chill",        label: "Chill",        emoji: "😌", desc: "Comedy, easy watching, laughs" },
+  { id: "happy",    label: "Happy",    emoji: "😊", desc: "Feel-good, romance, uplifting films" },
+  { id: "sad",      label: "Sad",      emoji: "😢", desc: "Emotional dramas, tearjerkers" },
+  { id: "angry",    label: "Angry",    emoji: "😠", desc: "Action, revenge, intense thrillers" },
+  { id: "surprise", label: "Surprise", emoji: "😮", desc: "Plot twists, sci-fi, mind-bending" },
+  { id: "fear",     label: "Fear",     emoji: "😨", desc: "Horror, suspense, dark mystery" },
+  { id: "disgust",  label: "Disgust",  emoji: "🤢", desc: "Gritty, dark, raw storytelling" },
+  { id: "neutral",  label: "Neutral",  emoji: "😐", desc: "Anything goes, surprise me" },
 ];
 
 
@@ -143,11 +145,7 @@ const Index = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await fetchPersonalizedHomeFeed(
-          watchlist,
-          feedRefresh,
-          cinemaLanguage
-        );
+        const data = await fetchAllMovies();
         if (!cancelled) setMovies(data);
       } finally {
         if (!cancelled) setLoading(false);
@@ -164,7 +162,7 @@ const Index = () => {
     const load = async () => {
       setRecentlyLoading(true);
       try {
-        const data = await fetchRecentlyReleased(cinemaLanguage);
+        const data = await fetchMoviesByMood("neutral");
         if (!cancelled) setRecentlyReleased(data.slice(0, 12));
       } finally {
         if (!cancelled) setRecentlyLoading(false);
@@ -209,7 +207,7 @@ const Index = () => {
     if (selectedMood === moodId) { setSelectedMood(null); setMoodResults([]); return; }
     setSelectedMood(moodId);
     setMoodLoading(true);
-    const results = await fetchMoodRecommendations(moodId, cinemaLanguage);
+    const results = await fetchMoviesByMood(moodId);
     setMoodResults(results);
     setMoodLoading(false);
   };
@@ -489,9 +487,21 @@ const Index = () => {
 
                     <MoodDetector
                       onMoodDetected={(moodId) => handleMoodSelect(moodId)}
+                      onMoodEvent={({ moodId, method, detectedEmotion }) => {
+                        void logMoodScan({
+                          moodId,
+                          detectionMethod: method,
+                          detectedEmotion,
+                        });
+                      }}
                       onCustomMood={async (text) => {
                         setSelectedMood("custom");
                         setMoodLoading(true);
+                        void logMoodScan({
+                          moodId: "custom",
+                          detectionMethod: "custom",
+                          customPrompt: text,
+                        });
                         const results = await fetchCustomMoodRecommendations(text, cinemaLanguage);
                         setMoodResults(results);
                         setMoodLoading(false);
@@ -543,15 +553,33 @@ const Index = () => {
                           <MovieGridSkeleton count={12} />
                         </motion.div>
                       ) : moodResults.length > 0 && (
-                        <motion.div 
-                          key="moodresults" 
-                          initial={{ opacity: 0, y: 20 }} 
-                          animate={{ opacity: 1, y: 0 }} 
-                          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8"
+                        <motion.div
+                          key="moodresults"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-8"
                         >
-                          {moodResultsDisplay.map((movie, i) => (
-                            <MovieCard cinemaLanguage={cinemaLanguage} key={movie.id} movie={movie} onClick={openDetails} index={i} />
-                          ))}
+                          {selectedMood === "sad" && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="rounded-[2rem] border border-blue-500/20 bg-blue-500/5 px-8 py-6 flex items-start gap-5"
+                            >
+                              <span className="text-4xl">🫂</span>
+                              <div className="space-y-1">
+                                <p className="text-white font-black text-sm uppercase tracking-widest">Hey, it's okay to feel sad.</p>
+                                <p className="text-slate-400 text-xs leading-relaxed max-w-xl">
+                                  Sometimes you just need to sit with it. We picked films that'll make you feel seen —
+                                  cry it out, feel deeply, and remember you're not alone. Better days are coming. 💙
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 md:gap-8">
+                            {moodResultsDisplay.map((movie, i) => (
+                              <MovieCard cinemaLanguage={cinemaLanguage} key={movie.id} movie={movie} onClick={openDetails} index={i} />
+                            ))}
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>

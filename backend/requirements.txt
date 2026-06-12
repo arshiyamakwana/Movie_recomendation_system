@@ -1,8 +1,8 @@
 opencv-python
-deepface
 tensorflow
 pandas
 flask
 flask-cors
-tf-keras
-gdown
+datasets
+pillow
+scipy

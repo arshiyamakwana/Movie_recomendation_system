@@ -9,6 +9,11 @@ interface MoodDetectorProps {
   onCustomMood: (text: string) => void;
   detectedMood: string | null;
   onReset: () => void;
+  onMoodEvent?: (event: {
+    moodId: string;
+    method: "camera" | "quiz";
+    detectedEmotion?: string | null;
+  }) => void;
 }
 
 // Mood scoring: each answer maps moodId → points
@@ -18,10 +23,10 @@ const QUESTIONS = [
     text: "How's your energy right now?",
     sub: "Be honest — we'll find the perfect match.",
     options: [
-      { label: "Dead calm", emoji: "😌", scores: { chill: 3, heartwarming: 1 } },
-      { label: "Wired & restless", emoji: "⚡", scores: { adrenaline: 3, epic: 1 } },
-      { label: "Curious, overthinking", emoji: "🌀", scores: { "mind-bending": 3, spooky: 1 } },
-      { label: "Low-key anxious", emoji: "😬", scores: { spooky: 2, "mind-bending": 1, chill: 1 } },
+      { label: "Calm & relaxed",      emoji: "😌", scores: { neutral: 3, sad: 1 } },
+      { label: "Wired & restless",    emoji: "⚡", scores: { angry: 3, surprise: 1 } },
+      { label: "Curious, overthinking", emoji: "🌀", scores: { surprise: 3, fear: 1 } },
+      { label: "Low-key anxious",     emoji: "😬", scores: { fear: 2, surprise: 1, neutral: 1 } },
     ],
   },
   {
@@ -29,10 +34,10 @@ const QUESTIONS = [
     text: "What do you want to feel after watching?",
     sub: "Pick the emotional destination.",
     options: [
-      { label: "Warm & fuzzy inside", emoji: "🫶", scores: { heartwarming: 3, chill: 1 } },
-      { label: "Heart still racing", emoji: "🔥", scores: { adrenaline: 3, epic: 1 } },
-      { label: "My mind is blown", emoji: "🤯", scores: { "mind-bending": 3, spooky: 1 } },
-      { label: "Glad I survived it", emoji: "😱", scores: { spooky: 3, "mind-bending": 1 } },
+      { label: "Warm & fuzzy inside", emoji: "🫶", scores: { happy: 3, neutral: 1 } },
+      { label: "Heart still racing",  emoji: "🔥", scores: { angry: 3, surprise: 1 } },
+      { label: "My mind is blown",    emoji: "🤯", scores: { surprise: 3, fear: 1 } },
+      { label: "Glad I survived it",  emoji: "😱", scores: { fear: 3, surprise: 1 } },
     ],
   },
   {
@@ -40,10 +45,10 @@ const QUESTIONS = [
     text: "Pick a vibe that matches tonight.",
     sub: "Go with your gut.",
     options: [
-      { label: "Rain, blanket, tea", emoji: "🌧️", scores: { chill: 3, heartwarming: 2 } },
-      { label: "Lights off, headphones", emoji: "🎧", scores: { spooky: 2, "mind-bending": 2 } },
-      { label: "Need a hero moment", emoji: "🏔️", scores: { epic: 3, adrenaline: 1 } },
-      { label: "Want to cry a little", emoji: "😢", scores: { heartwarming: 3, chill: 1 } },
+      { label: "Rain, blanket, tea",      emoji: "🌧️", scores: { sad: 3, neutral: 2 } },
+      { label: "Lights off, headphones",  emoji: "🎧", scores: { fear: 2, surprise: 2 } },
+      { label: "Need to punch something", emoji: "💢", scores: { angry: 3, disgust: 1 } },
+      { label: "Want to cry a little",    emoji: "😢", scores: { sad: 3, happy: 1 } },
     ],
   },
   {
@@ -51,27 +56,29 @@ const QUESTIONS = [
     text: "Last one: pick your spirit genre.",
     sub: "The one that never gets old for you.",
     options: [
-      { label: "Action / Thriller", emoji: "💥", scores: { adrenaline: 3, epic: 1 } },
-      { label: "Sci-Fi / Mind Games", emoji: "🛸", scores: { "mind-bending": 3, epic: 1 } },
-      { label: "Romance / Drama", emoji: "💛", scores: { heartwarming: 3, chill: 1 } },
-      { label: "Horror / Mystery", emoji: "👁️", scores: { spooky: 3, "mind-bending": 1 } },
+      { label: "Action / Thriller", emoji: "💥", scores: { angry: 3, surprise: 1 } },
+      { label: "Sci-Fi / Mystery",  emoji: "🛸", scores: { surprise: 3, neutral: 1 } },
+      { label: "Romance / Drama",   emoji: "💛", scores: { happy: 3, sad: 1 } },
+      { label: "Horror / Dark",     emoji: "👁️", scores: { fear: 3, disgust: 1 } },
     ],
   },
 ];
 
 const MOOD_META: Record<string, { label: string; emoji: string; color: string }> = {
-  "mind-bending": { label: "Mind-Bending",  emoji: "🌀", color: "from-violet-600 to-indigo-600" },
-  adrenaline:     { label: "Adrenaline",    emoji: "⚡", color: "from-orange-500 to-red-600" },
-  heartwarming:   { label: "Heartwarming",  emoji: "🫶", color: "from-pink-500 to-rose-500" },
-  spooky:         { label: "Spooky",        emoji: "👁️", color: "from-slate-700 to-purple-900" },
-  epic:           { label: "Epic",          emoji: "🏔️", color: "from-amber-500 to-yellow-600" },
-  chill:          { label: "Chill",         emoji: "😌", color: "from-teal-500 to-cyan-600" },
+  happy:    { label: "Happy",    emoji: "😊", color: "from-yellow-400 to-orange-400" },
+  sad:      { label: "Sad",      emoji: "😢", color: "from-blue-500 to-indigo-600" },
+  angry:    { label: "Angry",    emoji: "😠", color: "from-red-500 to-rose-700" },
+  surprise: { label: "Surprise", emoji: "😮", color: "from-violet-500 to-purple-700" },
+  fear:     { label: "Fear",     emoji: "😨", color: "from-slate-600 to-gray-900" },
+  disgust:  { label: "Disgust",  emoji: "🤢", color: "from-green-700 to-emerald-900" },
+  neutral:  { label: "Neutral",  emoji: "😐", color: "from-slate-400 to-slate-600" },
 };
 
-export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMood, onReset }: MoodDetectorProps) {
+export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMood, onReset, onMoodEvent }: MoodDetectorProps) {
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<'idle' | 'quiz' | 'camera'>('idle');
   const [isScanning, setIsScanning] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
   const [revealed, setRevealed] = useState(false);
@@ -79,16 +86,22 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
   const [showCustom, setShowCustom] = useState(false);
   const [customText, setCustomText] = useState("");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [faceBox, setFaceBox] = useState<{x: number, y: number, w: number, h: number} | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const videoReadyRetryRef = useRef<number | null>(null);
+  const faceDetectIntervalRef = useRef<number | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
 
   const isRunning = mode === 'quiz' && step > 0 && !revealed;
   const currentQ = QUESTIONS[step - 1];
 
   function startQuiz() {
     setMode('quiz');
+    setCameraError(null);
     setStep(1);
     setScores({});
     setSelectedOptions([]);
@@ -98,11 +111,17 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
   }
 
   function startCamera() {
+    stopCamera();
+    if (videoReadyRetryRef.current) {
+      window.clearTimeout(videoReadyRetryRef.current);
+      videoReadyRetryRef.current = null;
+    }
+    setVideoReady(false);
     setMode('camera');
+    setCameraError(null);
     setRevealed(false);
     setPending(null);
     setCapturedImage(null);
-    console.log("Mode set to 'camera'");
   }
 
   // Effect to handle camera stream initialization when mode becomes 'camera'
@@ -115,7 +134,7 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
       // If videoRef is not yet available, wait a tiny bit
       if (!videoRef.current) {
         console.log("videoRef not ready, retrying in 100ms...");
-        setTimeout(initCamera, 100);
+        videoReadyRetryRef.current = window.setTimeout(initCamera, 100);
         return;
       }
 
@@ -134,10 +153,13 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
           activeStream = stream;
+          videoRef.current.onloadeddata = () => setVideoReady(true);
+          videoRef.current.oncanplay = () => setVideoReady(true);
         }
       } catch (err) {
         console.error("Camera error:", err);
         toast.error("Could not access camera. Please check permissions.");
+        setCameraError("Camera access failed. Please allow camera permissions and try again.");
         setMode('idle');
       }
     }
@@ -147,6 +169,10 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
     }
 
     return () => {
+      if (videoReadyRetryRef.current) {
+        window.clearTimeout(videoReadyRetryRef.current);
+        videoReadyRetryRef.current = null;
+      }
       if (activeStream) {
         activeStream.getTracks().forEach(track => track.stop());
       }
@@ -155,6 +181,14 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
 
   function stopCamera() {
     console.log("Stopping camera...");
+    if (videoReadyRetryRef.current) {
+      window.clearTimeout(videoReadyRetryRef.current);
+      videoReadyRetryRef.current = null;
+    }
+    if (faceDetectIntervalRef.current) {
+      clearInterval(faceDetectIntervalRef.current);
+      faceDetectIntervalRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => {
         track.stop();
@@ -165,7 +199,90 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    setFaceBox(null);
   }
+
+  // Draw face box overlay on the overlay canvas
+  useEffect(() => {
+    const overlay = overlayCanvasRef.current;
+    const video = videoRef.current;
+    if (!overlay || !video) return;
+    const ctx = overlay.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    if (!faceBox || !videoReady) return;
+
+    const scaleX = overlay.width / video.videoWidth;
+    const scaleY = overlay.height / video.videoHeight;
+    const x = faceBox.x * scaleX;
+    const y = faceBox.y * scaleY;
+    const w = faceBox.w * scaleX;
+    const h = faceBox.h * scaleY;
+    const corner = 18;
+
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#a855f7';
+    ctx.shadowBlur = 10;
+
+    // Draw corner brackets only
+    const drawCorner = (cx: number, cy: number, dx: number, dy: number) => {
+      ctx.beginPath();
+      ctx.moveTo(cx + dx * corner, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + dy * corner);
+      ctx.stroke();
+    };
+    drawCorner(x, y, 1, 1);
+    drawCorner(x + w, y, -1, 1);
+    drawCorner(x, y + h, 1, -1);
+    drawCorner(x + w, y + h, -1, -1);
+
+    // Label
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#a855f7';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText('FACE DETECTED', x, y - 8);
+  }, [faceBox, videoReady]);
+
+  // Real-time face detection using backend every 1.5s
+  useEffect(() => {
+    if (!videoReady || mode !== 'camera' || capturedImage) return;
+
+    async function detectFace() {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (!video || !canvas || video.videoWidth === 0) return;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg', 0.5);
+
+      try {
+        const res = await fetch('http://localhost:5000/detect-face', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: imageData }),
+          signal: AbortSignal.timeout(3000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFaceBox(data.face || null);
+        }
+      } catch {
+        // silently ignore detection errors
+      }
+    }
+
+    faceDetectIntervalRef.current = window.setInterval(detectFace, 1500);
+    detectFace();
+    return () => {
+      if (faceDetectIntervalRef.current) clearInterval(faceDetectIntervalRef.current);
+    };
+  }, [videoReady, mode, capturedImage]);
 
   useEffect(() => {
     // General cleanup on unmount
@@ -174,20 +291,25 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
 
   async function captureAndDetect() {
     console.log("Capturing image and detecting mood...");
+    if (isScanning) {
+      return;
+    }
+
     if (!videoRef.current || !canvasRef.current) {
       console.warn("videoRef or canvasRef is missing", { video: !!videoRef.current, canvas: !!canvasRef.current });
       return;
     }
 
     setIsScanning(true);
+    setCameraError(null);
     const canvas = canvasRef.current;
     const video = videoRef.current;
 
     // Ensure video dimensions are valid
     if (video.videoWidth === 0 || video.videoHeight === 0) {
       console.warn("Video dimensions are 0, waiting for video to load...");
-      // Try again in 100ms
-      setTimeout(captureAndDetect, 100);
+      setCameraError("Camera is still starting. Please wait a moment, then try capture again.");
+      setIsScanning(false);
       return;
     }
 
@@ -199,36 +321,65 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedImage(imageData);
+      stopCamera();
       console.log(`Image captured (length: ${imageData.length})`);
 
       try {
         console.log("Sending request to backend: http://localhost:5000/detect-mood");
-        const response = await fetch('http://localhost:5000/detect-mood', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: imageData })
-        });
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 300000);
+        let response: Response;
+        try {
+          response = await fetch('http://localhost:5000/detect-mood', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: imageData }),
+            signal: controller.signal,
+          });
+        } finally {
+          window.clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
           const errorData = await response.json();
           console.error("Backend error response:", errorData);
           const errorMsg = errorData.details || errorData.error || 'Failed to detect mood';
-          toast.error(`Mood detection failed: ${errorMsg}`);
+          const errorHint = errorData.hint ? ` ${errorData.hint}` : "";
+          const combinedError = `${errorMsg}${errorHint}`.trim();
+          setCameraError(combinedError);
+          toast.error(combinedError);
           throw new Error(errorMsg);
         }
 
         const result = await response.json();
         console.log("Backend response received:", result);
+
+        if (result.error === "no_face") {
+          setCameraError("No face detected. Make sure your face is well-lit and clearly visible, then retake.");
+          toast.error("No face detected — try better lighting or move closer.");
+          setCapturedImage(null);
+          startCamera();
+          setIsScanning(false);
+          return;
+        }
+
         setPending(result.mood_id);
         setRevealed(true);
-        stopCamera();
-        setMode('idle'); 
-        onMoodDetected(result.mood_id); 
-      } catch (err: any) {
+        setMode('idle');
+        onMoodEvent?.({
+          moodId: result.mood_id,
+          method: "camera",
+          detectedEmotion: result.emotion ?? null,
+        });
+        onMoodDetected(result.mood_id);
+      } catch (err: unknown) {
         console.error("Detection error:", err);
-        if (!err.message.includes("Mood detection failed")) {
-          toast.error("Mood detection failed. Is the backend running?");
-        }
+        const fallback =
+          (err instanceof Error && err.name === "AbortError")
+            ? "Detection timed out — the model may be warming up. Please try again."
+            : "Capture worked, but detection failed. Please retake or restart the backend.";
+        setCameraError(fallback);
+        toast.error(fallback);
       } finally {
         setIsScanning(false);
       }
@@ -260,6 +411,10 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
         const detected = Object.entries(newScores).sort((a, b) => b[1] - a[1])[0][0];
         setPending(detected);
         setRevealed(true);
+        onMoodEvent?.({
+          moodId: detected,
+          method: "quiz",
+        });
         onMoodDetected(detected);
       }
     }, 420);
@@ -271,10 +426,12 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
     setSelectedOptions([]);
     setRevealed(false);
     setPending(null);
+    setCameraError(null);
     setShowCustom(false);
     setCustomText("");
     setCapturedImage(null);
     setMode('idle');
+    stopCamera();
     onReset();
   }
 
@@ -381,10 +538,34 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
             </div>
 
             <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-white/5">
-              {capturedImage && isScanning ? (
+              {capturedImage ? (
                 <img src={capturedImage} alt="Captured" className="w-full h-full object-cover" />
               ) : (
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    onLoadedData={() => {
+                      setVideoReady(true);
+                      if (overlayCanvasRef.current && videoRef.current) {
+                        overlayCanvasRef.current.width = videoRef.current.videoWidth || 640;
+                        overlayCanvasRef.current.height = videoRef.current.videoHeight || 480;
+                      }
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <canvas
+                    ref={overlayCanvasRef}
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                  />
+                  {!videoReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    </div>
+                  )}
+                </>
               )}
               <canvas ref={canvasRef} className="hidden" />
               {isScanning && (
@@ -395,17 +576,37 @@ export default function MoodDetector({ onMoodDetected, onCustomMood, detectedMoo
               )}
             </div>
 
+            {cameraError && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {cameraError}
+              </div>
+            )}
+
             <div className="flex gap-4">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={captureAndDetect}
-                disabled={isScanning}
+                disabled={isScanning || (!capturedImage && !videoReady)}
                 className="flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest hover:bg-primary/90 transition-all disabled:opacity-50"
               >
                 {isScanning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
                 Capture & Analyze
               </motion.button>
+              {capturedImage && !isScanning && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setCapturedImage(null);
+                    setCameraError(null);
+                    startCamera();
+                  }}
+                  className="px-6 py-4 rounded-2xl bg-white/5 border border-white/10 text-slate-300 font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  Retake
+                </motion.button>
+              )}
             </div>
           </motion.div>
         ) : isRunning && currentQ ? (

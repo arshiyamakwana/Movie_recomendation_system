@@ -308,16 +308,37 @@ const MOOD_PROFILES: Record<string, string> = {
     "adventure journey quest legendary battle kingdom fantasy hero mythical grand destiny heroic ancient empire war sacrifice prophecy dragon magic power",
   chill:
     "funny comedy laugh lighthearted relax fun casual easygoing humor witty charming road trip buddy slice life everyday quirky playful",
+  happy:
+    "love romance family friendship emotional touching inspiring hope redemption kindness compassion bond relationship warmth joy celebration forgiveness reunion tender",
+  sad:
+    "emotional drama heartbreak loss grief melancholy tearjerker sorrow longing bittersweet tragedy separation farewell memory nostalgia loneliness",
+  angry:
+    "action explosive fight chase intense battle war combat rescue thriller danger revenge fury vengeance justice confrontation aggression",
+  surprise:
+    "mystery twist unexpected shocking revelation plot unknown suspense thriller conspiracy discovery secret hidden truth investigation",
+  fear:
+    "horror scary ghost supernatural haunted terror fear dark evil creature monster paranormal suspense dread nightmare curse possessed demon",
+  disgust:
+    "dark gritty crime raw corrupt disturbing twisted villain moral complex taboo underground controversial brutal harsh reality",
+  neutral:
+    "adventure journey discovery exploration science documentary history interesting curious world culture knowledge travel",
 };
 
 
 const MOOD_GENRE_IDS: Record<string, number[]> = {
-  "mind-bending": [9648, 878, 18, 53],        
-  adrenaline:     [28, 12, 53, 80],           
-  heartwarming:   [10749, 10751, 35, 18],   
-  spooky:         [27, 9648, 53],           
-  epic:           [12, 14, 36, 28],          
-  chill:          [35, 99, 16, 10751],         
+  "mind-bending": [9648, 878, 18, 53],
+  adrenaline:     [28, 12, 53, 80],
+  heartwarming:   [10749, 10751, 35, 18],
+  spooky:         [27, 9648, 53],
+  epic:           [12, 14, 36, 28],
+  chill:          [35, 99, 16, 10751],
+  happy:          [10749, 35, 10751, 18],
+  sad:            [18, 36, 10402],
+  angry:          [28, 53, 80, 12],
+  surprise:       [878, 9648, 53, 12],
+  fear:           [27, 9648, 53],
+  disgust:        [80, 18, 27, 9648],
+  neutral:        [878, 9648, 12, 35, 99],
 };
 
 
