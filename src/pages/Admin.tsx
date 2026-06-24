@@ -43,10 +43,10 @@ const emptyForm = {
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
-  const [movies, setMovies] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [moodLogs, setMoodLogs] = useState<any[]>([]);
+  const [movies, setMovies] = useState<unknown[]>([]);
+  const [users, setUsers] = useState<unknown[]>([]);
+  const [subscriptions, setSubscriptions] = useState<unknown[]>([]);
+  const [moodLogs, setMoodLogs] = useState<unknown[]>([]);
   const [stats, setStats] = useState({ movies: 0, users: 0, subscriptions: 0, moods: 0 });
   const [modelMeta, setModelMeta] = useState<{ val_accuracy: number; val_loss: number; epochs_trained: number; total_samples: number; custom_samples: number } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -335,7 +335,7 @@ const Admin = () => {
                         <Label className="text-[10px] font-black uppercase tracking-widest text-primary/60">{field.label}</Label>
                         <Input
                           type={field.type || "text"}
-                          value={(form as any)[field.key]}
+                          value={(form as unknown)[field.key]}
                           onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
                           placeholder={field.placeholder}
                           className="bg-white/5 border-white/10 text-white rounded-xl"

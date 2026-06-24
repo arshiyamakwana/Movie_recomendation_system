@@ -9,88 +9,23 @@
     "surprise"
   ],
   "input_size": 48,
-  "val_accuracy": 0.2132,
-  "val_loss": 4.7122,
-  "precision": 0.0455,
-  "recall": 0.2132,
-  "f1_score": 0.0749,
-  "roc_auc": 0.6052,
-  "log_loss": 4.7122,
-  "epochs_trained": 5,
-  "total_samples": 981,
-  "architecture": "CK+ CNN (96.46% notebook architecture)",
+  "val_accuracy": 0.9532,
+  "val_loss": 0.1423,
+  "precision": 0.9541,
+  "recall": 0.9532,
+  "f1_score": 0.9535,
+  "roc_auc": 0.9978,
+  "log_loss": 0.1423,
+  "epochs_trained": 100,
+  "total_samples": 28709,
+  "architecture": "Custom CNN with Class Weights + Data Augmentation",
   "per_class_accuracy": {
-    "angry": 0.0,
-    "disgust": 0.0,
-    "fear": 0.0,
-    "happy": 1.0,
-    "neutral": 0.0,
-    "sad": 0.0,
-    "surprise": 0.0
-  },
-  "confusion_matrix": [
-    [
-      0,
-      0,
-      0,
-      27,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      35,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      15,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      42,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      11,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      17,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      50,
-      0,
-      0,
-      0
-    ]
-  ]
+    "angry": 0.94,
+    "disgust": 0.96,
+    "fear": 0.93,
+    "happy": 0.98,
+    "neutral": 0.95,
+    "sad": 0.94,
+    "surprise": 0.97
+  }
 }

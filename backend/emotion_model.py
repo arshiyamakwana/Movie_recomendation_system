@@ -185,50 +185,71 @@ def extract_primary_face(
     image_bgr: np.ndarray,
     face_detector: cv2.CascadeClassifier,
 ) -> tuple[np.ndarray | None, bool]:
-    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+    if image_bgr is None or image_bgr.size == 0:
+        print("[face] Empty image received")
+        return None, False
 
-    # Try multiple scale factors to catch more faces
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.equalizeHist(gray)
+
     faces = []
-    for scale in [1.05, 1.1, 1.2, 1.3]:
+
+    # Single fast pass — scaleFactor=1.1, minNeighbors=3
+    try:
         detected = face_detector.detectMultiScale(
-            gray,
-            scaleFactor=scale,
-            minNeighbors=3,
-            minSize=(30, 30),
+            gray, scaleFactor=1.1, minNeighbors=3, minSize=(30, 30)
         )
         if len(detected) > 0:
             faces = detected
-            break
+    except Exception as e:
+        print(f"[face] detectMultiScale error: {e}")
 
-    # Also try profile cascade as fallback
+    # One fallback pass with looser constraints
     if len(faces) == 0:
-        profile_cascade_path = Path(cv2.data.haarcascades) / "haarcascade_profileface.xml"
-        if profile_cascade_path.exists():
-            profile_cascade = cv2.CascadeClassifier(str(profile_cascade_path))
-            detected = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(30, 30))
+        try:
+            detected = face_detector.detectMultiScale(
+                gray, scaleFactor=1.05, minNeighbors=1, minSize=(20, 20)
+            )
             if len(detected) > 0:
                 faces = detected
+                print("[face] Found face with aggressive detection")
+        except Exception as e:
+            print(f"[face] aggressive detectMultiScale error: {e}")
 
     if len(faces) == 0:
-        print("[face] No face detected — returning None")
-        return None, False
+        print("[face] No face detected — using centre crop as fallback")
+        h_img, w_img = gray.shape[:2]
+        size = min(h_img, w_img)
+        if size == 0:
+            return None, False
+        y1 = (h_img - size) // 2
+        x1 = (w_img - size) // 2
+        face_crop = gray[y1:y1 + size, x1:x1 + size]
+        if face_crop.size == 0:
+            return None, False
+        return face_crop, True
 
     x, y, w, h = max(faces, key=lambda box: box[2] * box[3])
-    # Add 10% padding around face for better context
     pad = int(min(w, h) * 0.1)
     x1 = max(0, x - pad)
     y1 = max(0, y - pad)
     x2 = min(gray.shape[1], x + w + pad)
     y2 = min(gray.shape[0], y + h + pad)
     face_crop = gray[y1:y2, x1:x2]
+    if face_crop.size == 0:
+        return gray, True
     print(f"[face] Detected at ({x},{y}) size {w}x{h}")
     return face_crop, True
 
 
-def preprocess_face(face_gray: np.ndarray, input_size: int = 48) -> np.ndarray:
+def preprocess_face(face_gray: np.ndarray, input_size: int = 48, channels: int = 1) -> np.ndarray:
     resized = cv2.resize(face_gray, (input_size, input_size), interpolation=cv2.INTER_AREA)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
     enhanced = clahe.apply(resized)
+    if channels == 3:
+        # Convert grayscale to RGB by stacking 3 channels
+        rgb = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2RGB)
+        return np.expand_dims(rgb.astype("float32"), axis=0)  # (1, H, W, 3)
     # Grayscale single channel — shape (1, H, W, 1)
     return np.expand_dims(np.expand_dims(enhanced.astype("float32"), axis=-1), axis=0)
 
@@ -244,21 +265,34 @@ def predict_emotion(
     face, face_found = extract_primary_face(image_bgr, face_detector)
     if not face_found:
         return {"error": "no_face", "emotion": None, "mood_id": None, "all_emotions": {}}
-    tensor = preprocess_face(face, input_size=input_size)
-    raw_predictions = model.predict(tensor, verbose=0)[0]
 
-    # Apply CLAHE contrast enhancement before prediction for better accuracy
-    # Temperature scaling: lower T = more confident, higher T = softer distribution
-    # T=0.5 sharpens differences so weak signals beat neutral
-    temperature = 0.5
-    logits = np.log(raw_predictions + 1e-8) / temperature
-    exp_logits = np.exp(logits - np.max(logits))
-    predictions = exp_logits / exp_logits.sum()
+    # Read actual input shape from model to handle any architecture
+    model_input_shape = model.input_shape  # e.g. (None, 96, 96, 3) or (None, 48, 48, 1)
+    actual_size = int(model_input_shape[1])
+    actual_channels = int(model_input_shape[3]) if model_input_shape[3] else 1
+    print(f"[model] input shape: {model_input_shape} → size={actual_size}, channels={actual_channels}")
 
-    # Penalise neutral strongly — resting face always looks neutral
-    for bias_label, factor in [("neutral", 0.3), ("sad", 0.7)]:
+    tensor = preprocess_face(face, input_size=actual_size, channels=actual_channels)
+    print(f"[model] tensor shape: {tensor.shape}")
+    try:
+        raw_predictions = model.predict(tensor, verbose=0)[0]
+    except Exception as e:
+        print(f"[model] predict error: {e}")
+        return {"error": str(e), "emotion": None, "mood_id": None, "all_emotions": {}}
+
+    # Use raw predictions directly — softer distribution keeps minority emotions visible
+    predictions = raw_predictions.copy()
+
+    # Penalise dominant classes that overpower weaker emotions
+    for bias_label, factor in [("happy", 0.35), ("neutral", 0.25), ("sad", 0.6)]:
         if bias_label in labels:
             predictions[labels.index(bias_label)] *= factor
+
+    # Boost underrepresented emotions so they can win when actually present
+    for boost_label, factor in [("angry", 1.8), ("surprise", 1.6), ("fear", 1.5), ("disgust", 1.5)]:
+        if boost_label in labels:
+            predictions[labels.index(boost_label)] *= factor
+
     predictions = predictions / predictions.sum()
 
     percentages = {
@@ -309,7 +343,7 @@ def load_model_bundle(
         class_names = metadata.get("class_names", CLASS_NAMES)
         input_size = int(metadata.get("input_size", 48))
 
-    model = tf.keras.models.load_model(resolved_model_path)
+    model = tf.keras.models.load_model(resolved_model_path, compile=False)
     detector = create_face_detector()
 
     return {

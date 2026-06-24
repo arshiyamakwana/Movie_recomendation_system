@@ -22,6 +22,7 @@ def decode_image(image_data):
     nparr = np.frombuffer(img_bytes, np.uint8)
     return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
+
 def preload():
     global MODEL_BUNDLE
     print("Loading local emotion model...")
@@ -30,10 +31,11 @@ def preload():
         print(f"Emotion model ready: {MODEL_BUNDLE['model_path']}")
         # Warmup: run a dummy prediction so the first real request is fast
         input_shape = MODEL_BUNDLE["model"].input_shape
-        channels = input_shape[-1] if input_shape[-1] else 1
-        dummy = np.zeros((1, MODEL_BUNDLE["input_size"], MODEL_BUNDLE["input_size"], channels), dtype="float32")
+        channels = int(input_shape[-1]) if input_shape[-1] else 1
+        size = int(input_shape[1])
+        dummy = np.zeros((1, size, size, channels), dtype="float32")
         MODEL_BUNDLE["model"].predict(dummy, verbose=0)
-        print("Model warmup complete.")
+        print(f"Model warmup complete (input: {size}x{size}x{channels}).")
     except Exception as e:
         MODEL_BUNDLE = None
         import traceback
